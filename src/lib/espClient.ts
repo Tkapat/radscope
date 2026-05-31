@@ -79,6 +79,14 @@ class EspClient {
     this.send({ type: 'set_speed', speedHz, accel });
   }
 
+  sendSetLimit(axis: 'az' | 'el', limit: 'min' | 'max'): void {
+    this.send({ type: 'set_limit', axis, limit });
+  }
+
+  sendSetPark(): void {
+    this.send({ type: 'set_park' });
+  }
+
   /** Register a listener that fires on every ESP status message. */
   onStatus(cb: (s: EspStatus) => void): void {
     this.statusListeners.push(cb);

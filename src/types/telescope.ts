@@ -66,6 +66,13 @@ export interface EspStatus {
   elSteps: number;
   trackUpdateMs: number;
   ip: string;
+  minAz?: number;
+  maxAz?: number;
+  minEl?: number;
+  maxEl?: number;
+  parkAz?: number;
+  parkEl?: number;
+  limitsSet: boolean;
 }
 
 // Commands sent to ESP
@@ -91,7 +98,9 @@ export type EspCommand =
   | { type: 'park' }
   | { type: 'resume' }
   | { type: 'get_status' }
-  | { type: 'set_speed'; speedHz: number; accel: number };
+  | { type: 'set_speed'; speedHz: number; accel: number }
+  | { type: 'set_limit'; axis: 'az' | 'el'; limit: 'min' | 'max' }
+  | { type: 'set_park' };
 
 // Comms state
 export interface CommsState {

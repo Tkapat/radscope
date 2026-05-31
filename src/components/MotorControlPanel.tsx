@@ -39,6 +39,7 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
     return saved ? parseInt(saved, 10) : 800;
   });
   const [showMotorSettings, setShowMotorSettings] = useState(false);
+  const [showLimitsSettings, setShowLimitsSettings] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState<EspLog[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -288,7 +289,123 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
         )}
       </div>
 
-      {/* 3. HOME SETUP CARD */}
+      {/* 3. MANUAL JOG CARD */}
+      <div style={cardStyle}>
+        <div style={labelStyle}>Manual Jog</div>
+
+        {/* Jog step selector */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
+          {[0.1, 0.5, 1, 5, 10].map((step) => (
+            <button
+              key={step}
+              style={{
+                ...btnStyle,
+                padding: '5px 10px',
+                fontSize: 11,
+                color: jogStep === step ? THEME.accent : THEME.textMuted,
+                borderColor: jogStep === step ? `${THEME.accent}66` : THEME.border,
+                background: jogStep === step ? THEME.accentDim : THEME.bg1,
+              }}
+              onClick={() => handleJogStepChange(step)}
+            >
+              {step}°
+            </button>
+          ))}
+        </div>
+
+        {/* D-pad */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gridTemplateRows: '1fr 1fr 1fr',
+            gap: 4,
+            width: 150,
+            margin: '0 auto 12px auto',
+          }}
+        >
+          {/* Row 1: empty, up, empty */}
+          <div />
+          <button
+            style={{
+              ...btnStyle,
+              padding: '10px',
+              fontSize: 16,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
+              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
+            }}
+            onClick={() => sendJog(0, jogStep)}
+            title={`El +${jogStep}°`}
+            disabled={espStatus?.trackState === 1}
+          >
+            ↑
+          </button>
+          <div />
+
+          {/* Row 2: left, empty, right */}
+          <button
+            style={{
+              ...btnStyle,
+              padding: '10px',
+              fontSize: 16,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
+              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
+            }}
+            onClick={() => sendJog(-jogStep, 0)}
+            title={`Az -${jogStep}°`}
+            disabled={espStatus?.trackState === 1}
+          >
+            ←
+          </button>
+          <div />
+          <button
+            style={{
+              ...btnStyle,
+              padding: '10px',
+              fontSize: 16,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
+              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
+            }}
+            onClick={() => sendJog(jogStep, 0)}
+            title={`Az +${jogStep}°`}
+            disabled={espStatus?.trackState === 1}
+          >
+            →
+          </button>
+
+          {/* Row 3: empty, down, empty */}
+          <div />
+          <button
+            style={{
+              ...btnStyle,
+              padding: '10px',
+              fontSize: 16,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
+              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
+            }}
+            onClick={() => sendJog(0, -jogStep)}
+            title={`El -${jogStep}°`}
+            disabled={espStatus?.trackState === 1}
+          >
+            ↓
+          </button>
+          <div />
+        </div>
+      </div>
+
+      {/* 4. HOME SETUP CARD */}
       <div style={cardStyle}>
         <div style={labelStyle}>Polaris Alignment</div>
 
@@ -323,106 +440,7 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
                 marginBottom: 12,
               }}
             >
-              Manually jog dish to point at Polaris, then confirm
-            </div>
-
-            {/* Jog step selector */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
-              {[0.1, 0.5, 1, 5, 10].map((step) => (
-                <button
-                  key={step}
-                  style={{
-                    ...btnStyle,
-                    padding: '5px 10px',
-                    fontSize: 11,
-                    color: jogStep === step ? THEME.accent : THEME.textMuted,
-                    borderColor: jogStep === step ? `${THEME.accent}66` : THEME.border,
-                    background: jogStep === step ? THEME.accentDim : THEME.bg1,
-                  }}
-                  onClick={() => handleJogStepChange(step)}
-                >
-                  {step}°
-                </button>
-              ))}
-            </div>
-
-            {/* D-pad */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gridTemplateRows: '1fr 1fr 1fr',
-                gap: 4,
-                width: 150,
-                margin: '0 auto 12px auto',
-              }}
-            >
-              {/* Row 1: empty, up, empty */}
-              <div />
-              <button
-                style={{
-                  ...btnStyle,
-                  padding: '10px',
-                  fontSize: 16,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-                onClick={() => sendJog(0, jogStep)}
-                title={`El +${jogStep}°`}
-              >
-                ↑
-              </button>
-              <div />
-
-              {/* Row 2: left, empty, right */}
-              <button
-                style={{
-                  ...btnStyle,
-                  padding: '10px',
-                  fontSize: 16,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-                onClick={() => sendJog(-jogStep, 0)}
-                title={`Az -${jogStep}°`}
-              >
-                ←
-              </button>
-              <div />
-              <button
-                style={{
-                  ...btnStyle,
-                  padding: '10px',
-                  fontSize: 16,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-                onClick={() => sendJog(jogStep, 0)}
-                title={`Az +${jogStep}°`}
-              >
-                →
-              </button>
-
-              {/* Row 3: empty, down, empty */}
-              <div />
-              <button
-                style={{
-                  ...btnStyle,
-                  padding: '10px',
-                  fontSize: 16,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-                onClick={() => sendJog(0, -jogStep)}
-                title={`El -${jogStep}°`}
-              >
-                ↓
-              </button>
-              <div />
+              Manually jog dish to point at Polaris using the Manual Jog controls above, then confirm.
             </div>
 
             {/* Confirm & Cancel */}
@@ -454,7 +472,7 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
         )}
       </div>
 
-      {/* 4. TRACKING CONTROLS CARD */}
+      {/* 5. TRACKING CONTROLS CARD */}
       <div style={cardStyle}>
         <div style={labelStyle}>Tracking Controls</div>
 
@@ -524,7 +542,86 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
         )}
       </div>
 
-      {/* 5. MOTOR SETTINGS CARD (collapsible) */}
+      {/* 6. HARDWARE LIMITS & PARK (collapsible) */}
+      <div style={cardStyle}>
+        <div
+          style={{
+            ...labelStyle,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: showLimitsSettings ? 10 : 0,
+            userSelect: 'none',
+          }}
+          onClick={() => setShowLimitsSettings(!showLimitsSettings)}
+        >
+          <span>Hardware Limits & Park</span>
+          <span style={{ fontSize: 12, transition: 'transform 0.2s', transform: showLimitsSettings ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            ▼
+          </span>
+        </div>
+
+        {showLimitsSettings && (
+          <div>
+            <div style={{ color: THEME.textDim, fontSize: 11, marginBottom: 12 }}>
+              Jog to the desired position, then click to save it.
+            </div>
+            
+            {/* Azimuth Limits */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4 }}>Azimuth Limits</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  style={{ ...btnStyle, flex: 1, padding: '5px' }}
+                  onClick={() => espClient.sendSetLimit('az', 'min')}
+                >
+                  Set Az Min {espStatus?.minAz !== undefined ? `(${espStatus.minAz.toFixed(1)}°)` : ''}
+                </button>
+                <button
+                  style={{ ...btnStyle, flex: 1, padding: '5px' }}
+                  onClick={() => espClient.sendSetLimit('az', 'max')}
+                >
+                  Set Az Max {espStatus?.maxAz !== undefined ? `(${espStatus.maxAz.toFixed(1)}°)` : ''}
+                </button>
+              </div>
+            </div>
+
+            {/* Elevation Limits */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4 }}>Elevation Limits</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  style={{ ...btnStyle, flex: 1, padding: '5px' }}
+                  onClick={() => espClient.sendSetLimit('el', 'min')}
+                >
+                  Set El Min {espStatus?.minEl !== undefined ? `(${espStatus.minEl.toFixed(1)}°)` : ''}
+                </button>
+                <button
+                  style={{ ...btnStyle, flex: 1, padding: '5px' }}
+                  onClick={() => espClient.sendSetLimit('el', 'max')}
+                >
+                  Set El Max {espStatus?.maxEl !== undefined ? `(${espStatus.maxEl.toFixed(1)}°)` : ''}
+                </button>
+              </div>
+            </div>
+
+            {/* Park Position */}
+            <div>
+              <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4 }}>Parking Position</div>
+              <button
+                style={{ ...btnStyle, width: '100%', padding: '5px', borderColor: THEME.orange, color: THEME.orange }}
+                onClick={() => espClient.sendSetPark()}
+              >
+                Set Current Position as Park
+                {espStatus?.parkAz !== undefined ? ` (${espStatus.parkAz.toFixed(1)}°, ${espStatus.parkEl?.toFixed(1)}°)` : ''}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 7. MOTOR SETTINGS CARD (collapsible) */}
       <div style={cardStyle}>
         <div
           style={{
@@ -609,7 +706,7 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
         )}
       </div>
 
-      {/* 6. COMMUNICATIONS LOG (collapsible) */}
+      {/* 8. COMMUNICATIONS LOG (collapsible) */}
       <div style={cardStyle}>
         <div
           style={{
