@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import * as Astronomy from 'astronomy-engine';
+import { getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET, OBSERVER_LAT, OBSERVER_LON } from './solarTracker';
 
 // ── Observer ───────────────────────────────────────────────────────────────
 
@@ -113,4 +114,40 @@ export function getAllBodiesNow(
     const pos = getBodyAltAz(key, d);
     return { name: BODY_MAP[key], az: pos.targetAz, el: pos.targetEl };
   });
+}
+
+export function getMotorRaDec(
+  motorAzDeg: number,
+  motorElDeg: number,
+  date?: Date,
+): { raDeg: number; decDeg: number } {
+  const d = date ?? new Date();
+  
+  // 1. Get true north Azimuth
+  const trueAz = ((motorAzDeg + getPolarisAzimuth(d) - AZIMUTH_CALIBRATION_OFFSET) % 360 + 360) % 360;
+  
+  // 2. Convert to radians
+  const az = trueAz * (Math.PI / 180);
+  const el = motorElDeg * (Math.PI / 180);
+  const lat = OBSERVER_LAT * (Math.PI / 180);
+
+  // 3. Math for Dec
+  const sinDec = Math.sin(el) * Math.sin(lat) + Math.cos(el) * Math.cos(lat) * Math.cos(az);
+  const decRad = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+
+  // 4. Math for Hour Angle
+  const sinHa = -Math.sin(az) * Math.cos(el) / Math.cos(decRad);
+  const cosHa = (Math.sin(el) - Math.sin(lat) * Math.sin(decRad)) / (Math.cos(lat) * Math.cos(decRad));
+  const haRad = Math.atan2(sinHa, cosHa);
+  const haDeg = haRad * (180 / Math.PI);
+
+  // 5. Local Sidereal Time
+  const stHours = Astronomy.SiderealTime(d);
+  const lstDeg = (stHours * 15 + OBSERVER_LON) % 360;
+
+  // 6. RA
+  const raDeg = ((lstDeg - haDeg) % 360 + 360) % 360;
+  const decDeg = decRad * (180 / Math.PI);
+
+  return { raDeg, decDeg };
 }

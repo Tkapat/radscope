@@ -31,6 +31,14 @@ export interface TargetCoordinates {
   timestamp: number;
 }
 
+export interface MotorSkyCoordinates {
+  az: number;
+  el: number;
+  raDeg: number;
+  decDeg: number;
+  timestamp: number;
+}
+
 // Sky map body for 3D rendering
 export interface SkyMapBody {
   name: string;

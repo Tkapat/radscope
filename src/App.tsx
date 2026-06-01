@@ -81,6 +81,37 @@ function getTrackingMode(obj: CelestialObject): TrackingMode {
   }
 }
 
+function normalizeTarget(motorAz: number, motorEl: number, status: EspStatus | null) {
+  let finalAz = motorAz;
+  let finalEl = motorEl;
+
+  if (status) {
+    // 1. Zenith Flip if Elevation exceeds maxEl
+    if (status.limitsSet && status.maxEl !== undefined && finalEl > status.maxEl) {
+      finalAz = (finalAz + 180) % 360;
+      finalEl = 180 - finalEl;
+    }
+    
+    // 2. Shortest Path Unwrapping
+    const currentAz = status.az !== undefined ? status.az : 0;
+    let diff = (finalAz - currentAz) % 360;
+    if (diff > 180) diff -= 360;
+    if (diff <= -180) diff += 360;
+    finalAz = currentAz + diff;
+
+    // 3. Boundary Deflection (if unwrapped path hits a limit)
+    if (status.limitsSet && status.minAz !== undefined && status.maxAz !== undefined) {
+      if (finalAz < status.minAz && finalAz + 360 <= status.maxAz) {
+        finalAz += 360;
+      } else if (finalAz > status.maxAz && finalAz - 360 >= status.minAz) {
+        finalAz -= 360;
+      }
+    }
+  }
+  
+  return { finalAz, finalEl };
+}
+
 // ─── Main App ────────────────────────────────────────────────────
 export default function App() {
   // Restore persisted selected object id
@@ -99,14 +130,21 @@ export default function App() {
   const [availableSatellites, setAvailableSatellites] = useState<string[]>([]);
   const [selectedSatelliteName, setSelectedSatelliteName] = useState<string | undefined>(undefined);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [trackOffsetAz, setTrackOffsetAz] = useState(0);
+  const [trackOffsetEl, setTrackOffsetEl] = useState(0);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const skyRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const espStatusRef = useRef<EspStatus | null>(null);
+  const computeAndSendRef = useRef<() => void>(() => {});
 
   // ─── Init TLE service & ESP listeners ───
   useEffect(() => {
     initTleService().catch(console.warn);
-    espClient.onStatus((s) => setEspStatus(s));
+    espClient.onStatus((s) => {
+      setEspStatus(s);
+      espStatusRef.current = s;
+    });
     espClient.onConnect((c) => setEspConnected(c));
 
     return () => {
@@ -145,6 +183,10 @@ export default function App() {
   useEffect(() => {
     // Stop any active tracking
     stopTracking();
+    
+    // Reset tracking offsets
+    setTrackOffsetAz(0);
+    setTrackOffsetEl(0);
 
     // Persist selection
     localStorage.setItem('radioscope_selected_object', selectedObject.id);
@@ -253,9 +295,14 @@ export default function App() {
         motorEl = rawEl;
       }
 
+      motorAz += trackOffsetAz;
+      motorEl += trackOffsetEl;
+
+      const { finalAz, finalEl } = normalizeTarget(motorAz, motorEl, espStatusRef.current);
+
       const payload: TargetCoordinates = {
-        targetAz: motorAz,
-        targetEl: motorEl,
+        targetAz: finalAz,
+        targetEl: finalEl,
         rawAz,
         rawEl,
         raDeg,
@@ -266,11 +313,17 @@ export default function App() {
       };
 
       setCoords(payload);
-      espClient.sendTrack(motorAz, motorEl, selectedObject.name);
+      espClient.sendTrack(finalAz, finalEl, selectedObject.name);
     } catch (e) {
       console.warn('Tracking computation error:', e);
     }
-  }, [selectedObject, customRa, customDec, selectedSatelliteName]);
+  }, [selectedObject, customRa, customDec, selectedSatelliteName, trackOffsetAz, trackOffsetEl]);
+
+  // ─── Handle Jog Offsets ───
+  const handleJogOffset = useCallback((dAz: number, dEl: number) => {
+    setTrackOffsetAz(prev => prev + dAz);
+    setTrackOffsetEl(prev => prev + dEl);
+  }, []);
 
   // ─── Tracking control ───
   const startTracking = useCallback(() => {
@@ -283,10 +336,10 @@ export default function App() {
     }
     setIsTracking(true);
     // Compute immediately
-    computeAndSend();
+    computeAndSendRef.current();
     // Then every 500ms
-    trackingIntervalRef.current = setInterval(computeAndSend, 500);
-  }, [espStatus, computeAndSend]);
+    trackingIntervalRef.current = setInterval(() => computeAndSendRef.current(), 500);
+  }, [espStatus]);
 
   const stopTracking = useCallback(() => {
     if (trackingIntervalRef.current) {
@@ -305,6 +358,11 @@ export default function App() {
       if (trackingIntervalRef.current) clearInterval(trackingIntervalRef.current);
     };
   }, []);
+
+  // Sync ref
+  useEffect(() => {
+    computeAndSendRef.current = computeAndSend;
+  }, [computeAndSend]);
 
   // Compute coords on demand (for display when not tracking)
   useEffect(() => {
@@ -360,9 +418,11 @@ export default function App() {
           motorEl = rawEl;
         }
 
+        const { finalAz, finalEl } = normalizeTarget(motorAz, motorEl, espStatusRef.current);
+
         setCoords({
-          targetAz: motorAz,
-          targetEl: motorEl,
+          targetAz: finalAz,
+          targetEl: finalEl,
           rawAz,
           rawEl,
           raDeg,
@@ -528,6 +588,7 @@ export default function App() {
           isAppTracking={isTracking}
           onStartTracking={startTracking}
           onStopTracking={stopTracking}
+          onJogOffset={handleJogOffset}
         />
       </aside>
 

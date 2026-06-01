@@ -7,6 +7,7 @@ interface MotorControlPanelProps {
   isAppTracking: boolean;
   onStartTracking: () => void;
   onStopTracking: () => void;
+  onJogOffset?: (dAz: number, dEl: number) => void;
 }
 
 const TRACK_STATE_LABELS: Record<number, { label: string; color: string }> = {
@@ -20,10 +21,11 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
   isAppTracking,
   onStartTracking,
   onStopTracking,
+  onJogOffset,
 }) => {
   const [espStatus, setEspStatus] = useState<EspStatus | null>(null);
   const [espConnected, setEspConnected] = useState(false);
-  const [espIp, setEspIp] = useState(() => localStorage.getItem('radioscope_esp_ip') || '192.168.1.100');
+  const [espIp, setEspIp] = useState(() => localStorage.getItem('radioscope_esp_address') || 'radioscope.local');
   const [isSettingHome, setIsSettingHome] = useState(false);
   const [jogStep, setJogStep] = useState(() => {
     const saved = localStorage.getItem('radioscope_jog_step');
@@ -64,7 +66,7 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
   }, []);
 
   const handleIpCommit = useCallback(() => {
-    localStorage.setItem('radioscope_esp_ip', espIp);
+    localStorage.setItem('radioscope_esp_address', espIp);
     espClient.connect(espIp);
   }, [espIp]);
 
@@ -73,8 +75,12 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
   }, []);
 
   const sendJog = useCallback((deltaAz: number, deltaEl: number) => {
-    espClient.sendJog(deltaAz, deltaEl);
-  }, []);
+    if (isAppTracking && onJogOffset) {
+      onJogOffset(deltaAz, deltaEl);
+    } else {
+      espClient.sendJog(deltaAz, deltaEl);
+    }
+  }, [isAppTracking, onJogOffset]);
 
   const sendSetHome = useCallback(() => {
     espClient.sendSetHome();
@@ -163,7 +169,7 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
           <input
             type="text"
             value={espIp}
-            placeholder="IP or ws:// URL"
+            placeholder="radioscope.local or IP"
             onChange={(e) => handleIpChange(e.target.value)}
             onBlur={handleIpCommit}
             onKeyDown={(e) => {
@@ -334,12 +340,9 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
-              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
             }}
             onClick={() => sendJog(0, jogStep)}
             title={`El +${jogStep}°`}
-            disabled={espStatus?.trackState === 1}
           >
             ↑
           </button>
@@ -354,12 +357,9 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
-              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
             }}
             onClick={() => sendJog(-jogStep, 0)}
             title={`Az -${jogStep}°`}
-            disabled={espStatus?.trackState === 1}
           >
             ←
           </button>
@@ -372,12 +372,9 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
-              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
             }}
             onClick={() => sendJog(jogStep, 0)}
             title={`Az +${jogStep}°`}
-            disabled={espStatus?.trackState === 1}
           >
             →
           </button>
@@ -392,12 +389,9 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              opacity: espStatus?.trackState === 1 ? 0.4 : 1,
-              cursor: espStatus?.trackState === 1 ? 'not-allowed' : 'pointer'
             }}
             onClick={() => sendJog(0, -jogStep)}
             title={`El -${jogStep}°`}
-            disabled={espStatus?.trackState === 1}
           >
             ↓
           </button>

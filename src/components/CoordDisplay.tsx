@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { TargetCoordinates, EspStatus } from '../types/telescope';
+import { TargetCoordinates, EspStatus, MotorSkyCoordinates } from '../types/telescope';
 import { THEME } from '../styles/theme';
 import { isTleStale } from '../lib/tleService';
+import { getMotorRaDec } from '../lib/astronomyEngine';
 
 interface CoordDisplayProps {
   coords: TargetCoordinates | null;
   espStatus: EspStatus | null;
+  motorSkyPosition?: MotorSkyCoordinates | null;
 }
 
 const MODE_COLORS: Record<string, string> = {
@@ -17,7 +19,7 @@ const MODE_COLORS: Record<string, string> = {
   manual: THEME.textDim,
 };
 
-const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus }) => {
+const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSkyPosition }) => {
   const [timeAgo, setTimeAgo] = useState<string>('—');
 
   useEffect(() => {
@@ -165,7 +167,7 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus }) => {
               {coords.mode.replace('_', ' ')}
             </span>
             <span style={{ color: THEME.textDim, fontSize: 11 }}>
-              Updated: {timeAgo}
+              Computed at: {new Date(coords.timestamp).toLocaleTimeString()}
             </span>
           </div>
 
@@ -217,7 +219,12 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus }) => {
                   margin: '12px 0',
                 }}
               />
-              <div style={{ ...labelStyle, marginBottom: 6 }}>ESP Position</div>
+              <div style={{ ...labelStyle, marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                <span>ESP Position</span>
+                <span style={{ textTransform: 'none', fontWeight: 400, color: THEME.textDim }}>
+                  Last received: {new Date().toLocaleTimeString()}
+                </span>
+              </div>
               <div
                 style={{
                   display: 'flex',
@@ -250,6 +257,16 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus }) => {
                   </span>
                 </div>
               </div>
+
+              {/* Motor RA/Dec */}
+              {espStatus.az !== undefined && espStatus.el !== undefined && espStatus.homeSet && (
+                <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>
+                  {(() => {
+                    const raDec = getMotorRaDec(espStatus.az, espStatus.el);
+                    return `Motor RA ${raDec.raDeg.toFixed(2)}° Dec ${raDec.decDeg.toFixed(2)}°`;
+                  })()}
+                </div>
+              )}
 
               {/* Delta */}
               {coords && (
