@@ -3,6 +3,7 @@ import { TargetCoordinates, EspStatus, MotorSkyCoordinates } from '../types/tele
 import { THEME } from '../styles/theme';
 import { isTleStale } from '../lib/tleService';
 import { getMotorRaDec } from '../lib/astronomyEngine';
+import { getPolarisAzimuth } from '../lib/solarTracker';
 
 interface CoordDisplayProps {
   coords: TargetCoordinates | null;
@@ -91,55 +92,52 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
             {coords.objectName}
           </div>
 
-          {/* Motor Az / El */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              marginBottom: 8,
-            }}
-          >
-            <div>
-              <span style={{ color: THEME.textDim, fontSize: 10, marginRight: 4 }}>Az</span>
-              <span
-                style={{
-                  color: THEME.accent,
-                  fontSize: 22,
-                  fontFamily: THEME.font,
-                  fontWeight: 700,
-                }}
-              >
-                {coords.targetAz.toFixed(2)}°
-              </span>
+          {/* 1. True North (Stellarium Match) */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>1. Actual (True North)</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.rawAz?.toFixed(2) ?? '—'}°</span></span>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
             </div>
-            <div>
-              <span style={{ color: THEME.textDim, fontSize: 10, marginRight: 4 }}>El</span>
-              <span
-                style={{
-                  color: THEME.accent,
-                  fontSize: 22,
-                  fontFamily: THEME.font,
-                  fontWeight: 700,
-                }}
-              >
-                {coords.targetEl.toFixed(2)}°
-              </span>
+            <div style={{ color: THEME.textMuted, fontSize: 10 }}>
+              RA {coords.raDeg?.toFixed(2) ?? '—'}° | Dec {coords.decDeg?.toFixed(2) ?? '—'}°
             </div>
           </div>
 
-          {/* Raw Az (true north) */}
-          {coords.rawAz !== undefined && (
-            <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 4 }}>
-              True N: {coords.rawAz.toFixed(2)}°
+          {/* 2. Polaris Reference */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>2. Wrt Polaris</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
+              {(() => {
+                const pAz = getPolarisAzimuth(new Date(coords.timestamp));
+                const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
+                return (
+                  <>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.rawAz !== undefined ? relAz.toFixed(2) : '—'}°</span></span>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
+                  </>
+                );
+              })()}
             </div>
-          )}
+            <div style={{ color: THEME.textMuted, fontSize: 10 }}>
+              RA {coords.raDeg?.toFixed(2) ?? '—'}° | Dec {coords.decDeg?.toFixed(2) ?? '—'}°
+            </div>
+          </div>
 
-          {/* RA/Dec */}
-          {coords.raDeg !== undefined && coords.decDeg !== undefined && (
-            <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 6 }}>
-              RA {coords.raDeg.toFixed(2)}° Dec {coords.decDeg.toFixed(2)}°
+          {/* 3. Motor Target */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>3. Motor Target (w/ Offsets)</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetAz.toFixed(2)}°</span></span>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
             </div>
-          )}
+            <div style={{ color: THEME.textMuted, fontSize: 10 }}>
+              {(() => {
+                const mRaDec = getMotorRaDec(coords.targetAz, coords.targetEl, new Date(coords.timestamp));
+                return `RA ${mRaDec.raDeg.toFixed(2)}° | Dec ${mRaDec.decDeg.toFixed(2)}°`;
+              })()}
+            </div>
+          </div>
 
           {/* Mode badge + time ago */}
           <div
