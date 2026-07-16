@@ -374,8 +374,9 @@ export default function App() {
 
   // Compute coords on demand (for display when not tracking)
   useEffect(() => {
-    if (!isTracking) {
-      // Do a single computation for display
+    let displayInterval: ReturnType<typeof setInterval> | null = null;
+
+    const updateDisplay = () => {
       try {
         const now = new Date();
         let motorAz = 0;
@@ -442,7 +443,16 @@ export default function App() {
       } catch (e) {
         console.warn('Display computation error:', e);
       }
+    };
+
+    if (!isTracking) {
+      updateDisplay(); // initial calculation
+      displayInterval = setInterval(updateDisplay, 1000); // live updates every 1s
     }
+
+    return () => {
+      if (displayInterval) clearInterval(displayInterval);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedObject.id, customRa, customDec, selectedSatelliteName, isTracking]);
 
