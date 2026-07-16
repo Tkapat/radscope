@@ -123,3 +123,16 @@ export interface EspLog {
   direction: 'rx' | 'tx';
   payload: string;
 }
+
+export interface DataLogEntry {
+  time: string;
+  targetName: string;
+  targetAz: string;
+  targetEl: string;
+  targetRa: string;
+  targetDec: string;
+  motorAz: string;
+  motorEl: string;
+  deltaAz: string;
+  deltaEl: string;
+}

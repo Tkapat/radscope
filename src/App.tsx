@@ -7,6 +7,7 @@ import {
   SkyMapBody,
   SkyPath,
   TrackingMode,
+  DataLogEntry,
 } from './types/telescope';
 import { calculateSunPosition, getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET } from './lib/solarTracker';
 import { getBodyAltAz, getCustomRaDecAltAz, getBodyPath, getAllBodiesNow } from './lib/astronomyEngine';
@@ -23,6 +24,7 @@ import SkyMap3D from './components/SkyMap3D';
 import ObjectCatalogue, { CATALOGUE } from './components/ObjectCatalogue';
 import MotorControlPanel from './components/MotorControlPanel';
 import CoordDisplay from './components/CoordDisplay';
+import DataLoggerPanel from './components/DataLoggerPanel';
 
 // ─── Error Boundary ──────────────────────────────────────────────
 interface EBProps { children: ReactNode; }
@@ -132,6 +134,12 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [trackOffsetAz, setTrackOffsetAz] = useState(0);
   const [trackOffsetEl, setTrackOffsetEl] = useState(0);
+
+  // ─── Data Logger State ───
+  const [logs, setLogs] = useState<DataLogEntry[]>([]);
+  const [isLoggingEnabled, setIsLoggingEnabled] = useState(false);
+  const [logIntervalSecs, setLogIntervalSecs] = useState(1);
+  const latestDataRef = useRef({ coords: coords, esp: espStatus });
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const skyRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -438,6 +446,67 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedObject.id, customRa, customDec, selectedSatelliteName, isTracking]);
 
+  // ─── Data Logging Effect ───
+  useEffect(() => {
+    latestDataRef.current = { coords, esp: espStatus };
+  }, [coords, espStatus]);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+    if (isTracking && isLoggingEnabled) {
+      intervalId = setInterval(() => {
+        const data = latestDataRef.current;
+        if (!data.coords || !data.esp) return;
+
+        const d = new Date();
+        const deltaAz = Math.abs(data.coords.targetAz - (data.esp.az || 0));
+        const deltaEl = Math.abs(data.coords.targetEl - (data.esp.el || 0));
+        
+        const entry: DataLogEntry = {
+          time: d.toLocaleString(),
+          targetName: data.coords.objectName,
+          targetAz: data.coords.targetAz.toFixed(4),
+          targetEl: data.coords.targetEl.toFixed(4),
+          targetRa: (data.coords.raDeg ?? 0).toFixed(4),
+          targetDec: (data.coords.decDeg ?? 0).toFixed(4),
+          motorAz: (data.esp.az ?? 0).toFixed(4),
+          motorEl: (data.esp.el ?? 0).toFixed(4),
+          deltaAz: deltaAz.toFixed(4),
+          deltaEl: deltaEl.toFixed(4),
+        };
+        setLogs(prev => [...prev, entry]);
+      }, logIntervalSecs * 1000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isTracking, isLoggingEnabled, logIntervalSecs]);
+
+  const handleDownloadCsv = useCallback(() => {
+    if (logs.length === 0) return;
+    const headers = ["Time", "Target Name", "Target Az", "Target El", "Target RA", "Target Dec", "Motor Az", "Motor El", "Delta Az", "Delta El"];
+    const rows = logs.map(l => [
+      l.time,
+      `"${l.targetName}"`,
+      l.targetAz,
+      l.targetEl,
+      l.targetRa,
+      l.targetDec,
+      l.motorAz,
+      l.motorEl,
+      l.deltaAz,
+      l.deltaEl
+    ].join(","));
+    
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `radscope_log_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+    link.click();
+  }, [logs]);
+
   // ─── Handle object selection ───
   const handleObjectSelect = useCallback((obj: CelestialObject) => {
     setSelectedObject(obj);
@@ -589,6 +658,17 @@ export default function App() {
           onStartTracking={startTracking}
           onStopTracking={stopTracking}
           onJogOffset={handleJogOffset}
+        />
+        
+        <DataLoggerPanel
+          isLoggingEnabled={isLoggingEnabled}
+          setIsLoggingEnabled={setIsLoggingEnabled}
+          logIntervalSecs={logIntervalSecs}
+          setLogIntervalSecs={setLogIntervalSecs}
+          logCount={logs.length}
+          onDownloadCsv={handleDownloadCsv}
+          onClearLogs={() => setLogs([])}
+          isAppTracking={isTracking}
         />
       </aside>
 
