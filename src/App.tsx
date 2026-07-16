@@ -632,6 +632,8 @@ export default function App() {
           <CoordDisplay
             coords={coords}
             espStatus={espStatus}
+            trackOffsetAz={trackOffsetAz}
+            trackOffsetEl={trackOffsetEl}
           />
         </div>
       </aside>

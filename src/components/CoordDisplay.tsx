@@ -3,12 +3,14 @@ import { TargetCoordinates, EspStatus, MotorSkyCoordinates } from '../types/tele
 import { THEME } from '../styles/theme';
 import { isTleStale } from '../lib/tleService';
 import { getMotorRaDec } from '../lib/astronomyEngine';
-import { getPolarisAzimuth } from '../lib/solarTracker';
+import { getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET } from '../lib/solarTracker';
 
 interface CoordDisplayProps {
   coords: TargetCoordinates | null;
   espStatus: EspStatus | null;
   motorSkyPosition?: MotorSkyCoordinates | null;
+  trackOffsetAz: number;
+  trackOffsetEl: number;
 }
 
 const MODE_COLORS: Record<string, string> = {
@@ -20,7 +22,7 @@ const MODE_COLORS: Record<string, string> = {
   manual: THEME.textDim,
 };
 
-const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSkyPosition }) => {
+const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSkyPosition, trackOffsetAz, trackOffsetEl }) => {
   const [timeAgo, setTimeAgo] = useState<string>('—');
 
   useEffect(() => {
@@ -72,7 +74,12 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
 
   return (
     <div style={cardStyle}>
-      <div style={labelStyle}>Computed Position</div>
+      <div style={{ ...labelStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Computed Position</span>
+        <span style={{ color: THEME.amber, textTransform: 'none', fontWeight: 600 }}>
+          Offset: {trackOffsetAz.toFixed(2)}° / {trackOffsetEl.toFixed(2)}°
+        </span>
+      </div>
 
       {!coords ? (
         <div style={{ color: THEME.textDim, fontSize: 13, padding: '10px 0' }}>
@@ -124,9 +131,31 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
             </div>
           </div>
 
-          {/* 3. Motor Target */}
+          {/* 3. Required angle (with offset) */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>3. Motor Target (w/ Offsets)</div>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>3. Required angle (w/ Offset)</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
+              {(() => {
+                const pAz = getPolarisAzimuth(new Date(coords.timestamp));
+                const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
+                const preUnwrapAz = ((relAz + AZIMUTH_CALIBRATION_OFFSET + trackOffsetAz) % 360 + 360) % 360;
+                const preUnwrapEl = (coords.rawEl !== undefined ? coords.rawEl : coords.targetEl) + trackOffsetEl;
+                return (
+                  <>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{preUnwrapAz.toFixed(2)}°</span></span>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{preUnwrapEl.toFixed(2)}°</span></span>
+                  </>
+                );
+              })()}
+            </div>
+            <div style={{ color: THEME.textMuted, fontSize: 10 }}>
+              (Pre-unwrapping)
+            </div>
+          </div>
+          
+          {/* 4. Required angle (Shortest Path) */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>4. Required angle (Shortest Path)</div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
               <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetAz.toFixed(2)}°</span></span>
               <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
@@ -136,6 +165,15 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
                 const mRaDec = getMotorRaDec(coords.targetAz, coords.targetEl, new Date(coords.timestamp));
                 return `RA ${mRaDec.raDeg.toFixed(2)}° | Dec ${mRaDec.decDeg.toFixed(2)}°`;
               })()}
+            </div>
+          </div>
+
+          {/* 5. Error (Manual Adjustment) */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>5. Error (Manual Adjustment)</div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>ΔAz <span style={{ color: THEME.amber, fontWeight: 'bold' }}>{trackOffsetAz.toFixed(2)}°</span></span>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>ΔEl <span style={{ color: THEME.amber, fontWeight: 'bold' }}>{trackOffsetEl.toFixed(2)}°</span></span>
             </div>
           </div>
 
