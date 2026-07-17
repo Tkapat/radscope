@@ -12,7 +12,7 @@ class EspClient {
   private logListeners: Array<(l: EspLog) => void> = [];
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private lastSentTrackMs: number = 0;
-  private readonly CLIENT_THROTTLE_MS = 500;
+  private readonly CLIENT_THROTTLE_MS = 100;
 
   // ── Public API ───────────────────────────────────────────────────────────
 

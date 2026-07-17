@@ -372,6 +372,13 @@ export default function App() {
     computeAndSendRef.current = computeAndSend;
   }, [computeAndSend]);
 
+  // Immediately send tracking updates when manual jog offsets change
+  useEffect(() => {
+    if (isTracking && computeAndSendRef.current) {
+      computeAndSendRef.current();
+    }
+  }, [trackOffsetAz, trackOffsetEl, isTracking]);
+
   // Compute coords on demand (for display when not tracking)
   useEffect(() => {
     let displayInterval: ReturnType<typeof setInterval> | null = null;
