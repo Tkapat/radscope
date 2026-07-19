@@ -148,9 +148,6 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
                 );
               })()}
             </div>
-            <div style={{ color: THEME.textMuted, fontSize: 10 }}>
-              (Pre-unwrapping)
-            </div>
           </div>
           
           {/* 4. Required angle (Shortest Path) */}
@@ -244,99 +241,7 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
                 </span>
               )}
             </div>
-          )}
-
-          {/* ESP Position */}
-          {espStatus && (
-            <>
-              <div
-                style={{
-                  borderTop: `1px solid ${THEME.border}`,
-                  margin: '12px 0',
-                }}
-              />
-              <div style={{ ...labelStyle, marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                <span>ESP Position</span>
-                <span style={{ textTransform: 'none', fontWeight: 400, color: THEME.textDim }}>
-                  Last received: {new Date().toLocaleTimeString()}
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 16,
-                  marginBottom: 6,
-                }}
-              >
-                <div>
-                  <span style={{ color: THEME.textDim, fontSize: 10, marginRight: 4 }}>Az</span>
-                  <span
-                    style={{
-                      color: THEME.textMuted,
-                      fontSize: 16,
-                      fontFamily: THEME.font,
-                    }}
-                  >
-                    {espStatus.az?.toFixed(2) ?? '—'}°
-                  </span>
-                </div>
-                <div>
-                  <span style={{ color: THEME.textDim, fontSize: 10, marginRight: 4 }}>El</span>
-                  <span
-                    style={{
-                      color: THEME.textMuted,
-                      fontSize: 16,
-                      fontFamily: THEME.font,
-                    }}
-                  >
-                    {espStatus.el?.toFixed(2) ?? '—'}°
-                  </span>
-                </div>
-              </div>
-
-              {/* Motor RA/Dec */}
-              {espStatus.az !== undefined && espStatus.el !== undefined && espStatus.homeSet && (
-                <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>
-                  {(() => {
-                    const raDec = getMotorRaDec(espStatus.az, espStatus.el);
-                    return `Motor RA ${raDec.raDeg.toFixed(2)}° Dec ${raDec.decDeg.toFixed(2)}°`;
-                  })()}
-                </div>
-              )}
-
-              {/* Delta */}
-              {coords && (
-                <div style={{ display: 'flex', gap: 12 }}>
-                  {(() => {
-                    const deltaAz = Math.abs(coords.targetAz - espStatus.az);
-                    const deltaEl = Math.abs(coords.targetEl - espStatus.el);
-                    return (
-                      <>
-                        <span
-                          style={{
-                            color: getDeltaColor(deltaAz),
-                            fontSize: 12,
-                            fontFamily: THEME.font,
-                          }}
-                        >
-                          ΔAz {deltaAz.toFixed(2)}°
-                        </span>
-                        <span
-                          style={{
-                            color: getDeltaColor(deltaEl),
-                            fontSize: 12,
-                            fontFamily: THEME.font,
-                          }}
-                        >
-                          ΔEl {deltaEl.toFixed(2)}°
-                        </span>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </>
-          )}
+          )}          
         </>
       )}
     </div>

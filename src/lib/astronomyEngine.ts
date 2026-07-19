@@ -7,7 +7,7 @@ import { getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET, OBSERVER_LAT, OBSERVER_L
 
 // ── Observer ───────────────────────────────────────────────────────────────
 
-const observer = new Astronomy.Observer(22.5546, 88.4960, 0);
+const observer = new Astronomy.Observer(22.5601079, 88.4873657, 0);
 
 // ── Body map ───────────────────────────────────────────────────────────────
 // astronomy-engine uses plain string body names in its API surface.

@@ -311,6 +311,10 @@ export default function App() {
       const payload: TargetCoordinates = {
         targetAz: finalAz,
         targetEl: finalEl,
+        reqAngleAz: motorAz,
+        reqAngleEl: motorEl,
+        trackOffsetAz,
+        trackOffsetEl,
         rawAz,
         rawEl,
         raDeg,
@@ -476,19 +480,28 @@ export default function App() {
         if (!data.coords || !data.esp) return;
 
         const d = new Date();
-        const deltaAz = Math.abs(data.coords.targetAz - (data.esp.az || 0));
-        const deltaEl = Math.abs(data.coords.targetEl - (data.esp.el || 0));
+        const actualAz = data.esp.az || 0;
+        const actualEl = data.esp.el || 0;
+        
+        const reqAngleAz = data.coords.reqAngleAz ?? data.coords.targetAz;
+        const reqAngleEl = data.coords.reqAngleEl ?? data.coords.targetEl;
+        const offsetAz = data.coords.trackOffsetAz ?? 0;
+        const offsetEl = data.coords.trackOffsetEl ?? 0;
+        
+        const deltaAz = reqAngleAz - actualAz + offsetAz;
+        const deltaEl = reqAngleEl - actualEl + offsetEl;
         
         const entry: DataLogEntry = {
-          time: d.toLocaleString(),
+          date: d.toLocaleDateString(),
+          time: d.toLocaleTimeString(),
           targetName: data.coords.objectName,
-          targetAz: data.coords.targetAz.toFixed(4),
-          targetEl: data.coords.targetEl.toFixed(4),
-          targetRa: (data.coords.raDeg ?? 0).toFixed(4),
-          targetDec: (data.coords.decDeg ?? 0).toFixed(4),
-          motorAz: (data.esp.az ?? 0).toFixed(4),
-          motorEl: (data.esp.el ?? 0).toFixed(4),
+          actualAz: actualAz.toFixed(4),
+          reqAngleAz: reqAngleAz.toFixed(4),
+          manualAdjustAz: offsetAz.toFixed(4),
           deltaAz: deltaAz.toFixed(4),
+          actualEl: actualEl.toFixed(4),
+          reqAngleEl: reqAngleEl.toFixed(4),
+          manualAdjustEl: offsetEl.toFixed(4),
           deltaEl: deltaEl.toFixed(4),
         };
         setLogs(prev => [...prev, entry]);
@@ -501,17 +514,22 @@ export default function App() {
 
   const handleDownloadCsv = useCallback(() => {
     if (logs.length === 0) return;
-    const headers = ["Time", "Target Name", "Target Az", "Target El", "Target RA", "Target Dec", "Motor Az", "Motor El", "Delta Az", "Delta El"];
+    const headers = [
+      "Date", "Time", "Target", 
+      "Actual Az", "Required angle (Az)", "Manual adjustment (Az)", "Delta Az", 
+      "Actual El", "Required angle (El)", "Manual adjustment (El)", "Delta El"
+    ];
     const rows = logs.map(l => [
+      l.date,
       l.time,
       `"${l.targetName}"`,
-      l.targetAz,
-      l.targetEl,
-      l.targetRa,
-      l.targetDec,
-      l.motorAz,
-      l.motorEl,
+      l.actualAz,
+      l.reqAngleAz,
+      l.manualAdjustAz,
       l.deltaAz,
+      l.actualEl,
+      l.reqAngleEl,
+      l.manualAdjustEl,
       l.deltaEl
     ].join(","));
     

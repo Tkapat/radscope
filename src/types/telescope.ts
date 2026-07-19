@@ -22,6 +22,10 @@ export interface CelestialObject {
 export interface TargetCoordinates {
   targetAz: number;
   targetEl: number;
+  reqAngleAz?: number;
+  reqAngleEl?: number;
+  trackOffsetAz?: number;
+  trackOffsetEl?: number;
   rawAz?: number;
   rawEl?: number;
   raDeg?: number;
@@ -125,14 +129,15 @@ export interface EspLog {
 }
 
 export interface DataLogEntry {
+  date: string;
   time: string;
   targetName: string;
-  targetAz: string;
-  targetEl: string;
-  targetRa: string;
-  targetDec: string;
-  motorAz: string;
-  motorEl: string;
+  actualAz: string;
+  reqAngleAz: string;
+  manualAdjustAz: string;
   deltaAz: string;
+  actualEl: string;
+  reqAngleEl: string;
+  manualAdjustEl: string;
   deltaEl: string;
 }
