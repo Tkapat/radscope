@@ -480,8 +480,8 @@ export default function App() {
         if (!data.coords || !data.esp) return;
 
         const d = new Date();
-        const actualAz = data.esp.az || 0;
-        const actualEl = data.esp.el || 0;
+        const actualAz = data.coords.rawAz ?? data.coords.targetAz;
+        const actualEl = data.coords.rawEl ?? data.coords.targetEl;
         
         const reqAngleAz = data.coords.reqAngleAz ?? data.coords.targetAz;
         const reqAngleEl = data.coords.reqAngleEl ?? data.coords.targetEl;
