@@ -488,8 +488,11 @@ export default function App() {
         const offsetAz = data.coords.trackOffsetAz ?? 0;
         const offsetEl = data.coords.trackOffsetEl ?? 0;
         
-        const deltaAz = reqAngleAz - actualAz + offsetAz;
-        const deltaEl = reqAngleEl - actualEl + offsetEl;
+        const motorAzCalc = reqAngleAz + offsetAz;
+        const motorElCalc = reqAngleEl + offsetEl;
+        
+        const deltaAz = motorAzCalc - actualAz;
+        const deltaEl = motorElCalc - actualEl;
         
         const entry: DataLogEntry = {
           date: d.toLocaleDateString(),
@@ -497,11 +500,11 @@ export default function App() {
           targetName: data.coords.objectName,
           actualAz: actualAz.toFixed(4),
           reqAngleAz: reqAngleAz.toFixed(4),
-          manualAdjustAz: offsetAz.toFixed(4),
+          motorAz: motorAzCalc.toFixed(4),
           deltaAz: deltaAz.toFixed(4),
           actualEl: actualEl.toFixed(4),
           reqAngleEl: reqAngleEl.toFixed(4),
-          manualAdjustEl: offsetEl.toFixed(4),
+          motorEl: motorElCalc.toFixed(4),
           deltaEl: deltaEl.toFixed(4),
         };
         setLogs(prev => [...prev, entry]);
@@ -516,8 +519,8 @@ export default function App() {
     if (logs.length === 0) return;
     const headers = [
       "Date", "Time", "Target", 
-      "Actual Az", "Required angle (Az)", "Manual adjustment (Az)", "Delta Az", 
-      "Actual El", "Required angle (El)", "Manual adjustment (El)", "Delta El"
+      "Actual Az", "Required angle (Az)", "Motor Az", "Delta Az", 
+      "Actual El", "Required angle (El)", "Motor El", "Delta El"
     ];
     const rows = logs.map(l => [
       l.date,
@@ -525,11 +528,11 @@ export default function App() {
       `"${l.targetName}"`,
       l.actualAz,
       l.reqAngleAz,
-      l.manualAdjustAz,
+      l.motorAz,
       l.deltaAz,
       l.actualEl,
       l.reqAngleEl,
-      l.manualAdjustEl,
+      l.motorEl,
       l.deltaEl
     ].join(","));
     

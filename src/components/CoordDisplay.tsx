@@ -138,29 +138,33 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
               {(() => {
                 const pAz = getPolarisAzimuth(new Date(coords.timestamp));
                 const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
-                const preUnwrapAz = ((relAz + AZIMUTH_CALIBRATION_OFFSET + trackOffsetAz) % 360 + 360) % 360;
-                const preUnwrapEl = (coords.rawEl !== undefined ? coords.rawEl : coords.targetEl) + trackOffsetEl;
+                const reqAz = ((relAz + AZIMUTH_CALIBRATION_OFFSET) % 360 + 360) % 360;
+                const reqEl = coords.rawEl !== undefined ? coords.rawEl : coords.targetEl;
                 return (
                   <>
-                    <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{preUnwrapAz.toFixed(2)}°</span></span>
-                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{preUnwrapEl.toFixed(2)}°</span></span>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{reqAz.toFixed(2)}°</span></span>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{reqEl.toFixed(2)}°</span></span>
                   </>
                 );
               })()}
             </div>
           </div>
           
-          {/* 4. Required angle (Shortest Path) */}
+          {/* 4. Current Position */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>4. Required angle (Shortest Path)</div>
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>4. Current Position</div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
-              <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetAz.toFixed(2)}°</span></span>
-              <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
-            </div>
-            <div style={{ color: THEME.textMuted, fontSize: 10 }}>
               {(() => {
-                const mRaDec = getMotorRaDec(coords.targetAz, coords.targetEl, new Date(coords.timestamp));
-                return `RA ${mRaDec.raDeg.toFixed(2)}° | Dec ${mRaDec.decDeg.toFixed(2)}°`;
+                const pAz = getPolarisAzimuth(new Date(coords.timestamp));
+                const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
+                const curAz = ((relAz + AZIMUTH_CALIBRATION_OFFSET + trackOffsetAz) % 360 + 360) % 360;
+                const curEl = (coords.rawEl !== undefined ? coords.rawEl : coords.targetEl) + trackOffsetEl;
+                return (
+                  <>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{curAz.toFixed(2)}°</span></span>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{curEl.toFixed(2)}°</span></span>
+                  </>
+                );
               })()}
             </div>
           </div>

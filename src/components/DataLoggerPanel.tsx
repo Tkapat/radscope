@@ -65,7 +65,7 @@ const DataLoggerPanel: React.FC<DataLoggerPanelProps> = ({
   return (
     <div style={cardStyle}>
       <div style={{ ...labelStyle, marginBottom: 10 }}>Data Logger</div>
-      
+
       {/* Enable Toggle */}
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 12 }}>
         <input
@@ -86,7 +86,7 @@ const DataLoggerPanel: React.FC<DataLoggerPanelProps> = ({
           type="number"
           min="1"
           value={intervalVal}
-          onChange={(e) => setIntervalVal(parseInt(e.target.value) || 1)}
+          onChange={(e) => setIntervalVal(parseInt(e.target.value) || 0)}
           style={{
             background: THEME.bg1,
             border: `1px solid ${THEME.border}`,
@@ -122,10 +122,10 @@ const DataLoggerPanel: React.FC<DataLoggerPanelProps> = ({
         <span style={{ color: THEME.textMuted, fontSize: 12 }}>
           Saved points: <strong style={{ color: THEME.accent }}>{logCount}</strong>
         </span>
-        <span style={{ 
-          fontSize: 10, 
-          fontWeight: 700, 
-          padding: '2px 6px', 
+        <span style={{
+          fontSize: 10,
+          fontWeight: 700,
+          padding: '2px 6px',
           borderRadius: 4,
           background: isLoggingEnabled && isAppTracking ? `${THEME.green}22` : `${THEME.textDim}22`,
           color: isLoggingEnabled && isAppTracking ? THEME.green : THEME.textDim,
@@ -136,15 +136,15 @@ const DataLoggerPanel: React.FC<DataLoggerPanelProps> = ({
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button 
-          style={{ ...btnStyle, opacity: logCount > 0 ? 1 : 0.5 }} 
-          onClick={onDownloadCsv} 
+        <button
+          style={{ ...btnStyle, opacity: logCount > 0 ? 1 : 0.5 }}
+          onClick={onDownloadCsv}
           disabled={logCount === 0}
         >
           Download CSV
         </button>
-        <button 
-          style={{ ...btnStyle, background: `${THEME.danger}22`, color: THEME.danger, border: `1px solid ${THEME.danger}44`, opacity: logCount > 0 ? 1 : 0.5 }} 
+        <button
+          style={{ ...btnStyle, background: `${THEME.danger}22`, color: THEME.danger, border: `1px solid ${THEME.danger}44`, opacity: logCount > 0 ? 1 : 0.5 }}
           onClick={onClearLogs}
           disabled={logCount === 0}
         >

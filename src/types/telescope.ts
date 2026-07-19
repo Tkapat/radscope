@@ -134,10 +134,10 @@ export interface DataLogEntry {
   targetName: string;
   actualAz: string;
   reqAngleAz: string;
-  manualAdjustAz: string;
+  motorAz: string;
   deltaAz: string;
   actualEl: string;
   reqAngleEl: string;
-  manualAdjustEl: string;
+  motorEl: string;
   deltaEl: string;
 }
