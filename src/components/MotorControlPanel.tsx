@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { EspStatus, EspLog } from '../types/telescope';
 import { espClient } from '../lib/espClient';
+import { bleClient, SavedWifiNetwork, BleWifiStatus } from '../lib/bleClient';
 import { THEME } from '../styles/theme';
 
 interface MotorControlPanelProps {
@@ -46,6 +47,17 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
   const [logs, setLogs] = useState<EspLog[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
+  // ─── BLE State ───
+  const [bleConnected, setBleConnected] = useState(false);
+  const [bleNetworks, setBleNetworks] = useState<SavedWifiNetwork[]>([]);
+  const [bleLastSsid, setBleLastSsid] = useState('');
+  const [bleStatus, setBleStatus] = useState<BleWifiStatus | null>(null);
+  const [showBleSetup, setShowBleSetup] = useState(false);
+  const [newSsid, setNewSsid] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [bleConnecting, setBleConnecting] = useState(false);
+  const bleSupported = bleClient.isSupported();
+
   useEffect(() => {
     espClient.onStatus((status: EspStatus) => setEspStatus(status));
     espClient.onConnect((connected: boolean) => setEspConnected(connected));
@@ -53,6 +65,29 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
       setLogs((prev) => [...prev.slice(-49), log]);
     });
     espClient.connect(espIp);
+  }, []);
+
+  // ─── BLE Listeners ───
+  useEffect(() => {
+    bleClient.onConnection((connected: boolean) => setBleConnected(connected));
+    bleClient.onNetworkList((networks: SavedWifiNetwork[], last: string) => {
+      setBleNetworks(networks);
+      setBleLastSsid(last);
+    });
+    bleClient.onStatus((status: BleWifiStatus) => {
+      setBleStatus(status);
+      if (status.type === 'CONNECTED') {
+        // ESP32 connected to WiFi — switch to WebSocket mode
+        const ip = status.ip;
+        setEspIp(ip);
+        localStorage.setItem('radioscope_esp_address', ip);
+        // Give ESP32 a moment to start WebSocket server
+        setTimeout(() => {
+          espClient.connect(ip);
+        }, 1500);
+        setShowBleSetup(false);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -72,6 +107,38 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
 
   const handleDisconnect = useCallback(() => {
     espClient.disconnect();
+  }, []);
+
+  const handleBleConnect = useCallback(async () => {
+    setBleConnecting(true);
+    const success = await bleClient.connect();
+    setBleConnecting(false);
+    if (success) {
+      setShowBleSetup(true);
+    }
+  }, []);
+
+  const handleBleDisconnect = useCallback(() => {
+    bleClient.disconnect();
+    setShowBleSetup(false);
+    setBleNetworks([]);
+    setBleStatus(null);
+  }, []);
+
+  const handleBleConnectNetwork = useCallback(async (ssid: string) => {
+    setBleStatus({ type: 'CONNECTING', ssid });
+    await bleClient.connectNetwork(ssid);
+  }, []);
+
+  const handleBleAddNetwork = useCallback(async () => {
+    if (!newSsid.trim()) return;
+    await bleClient.addNetwork(newSsid.trim(), newPass);
+    setNewSsid('');
+    setNewPass('');
+  }, [newSsid, newPass]);
+
+  const handleBleForgetNetwork = useCallback(async (ssid: string) => {
+    await bleClient.forgetNetwork(ssid);
   }, []);
 
   const sendJog = useCallback((deltaAz: number, deltaEl: number) => {
@@ -207,7 +274,198 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
           <span style={{ color: espConnected ? THEME.green : THEME.danger, fontSize: 12 }}>
             {espConnected ? 'Connected' : 'Disconnected'}
           </span>
+
+          {/* BLE indicator */}
+          {bleConnected && (
+            <>
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: THEME.purple,
+                  boxShadow: `0 0 6px ${THEME.purple}66`,
+                  marginLeft: 8,
+                }}
+              />
+              <span style={{ color: THEME.purple, fontSize: 12 }}>BLE</span>
+            </>
+          )}
         </div>
+
+        {/* BLE Setup Section — visible when WebSocket is NOT connected */}
+        {!espConnected && (
+          <div style={{ marginTop: 12 }}>
+            {!showBleSetup ? (
+              <button
+                style={{
+                  ...btnStyle,
+                  width: '100%',
+                  color: THEME.purple,
+                  borderColor: `${THEME.purple}44`,
+                  background: `${THEME.purple}12`,
+                  opacity: bleSupported ? 1 : 0.4,
+                  cursor: bleSupported ? 'pointer' : 'not-allowed',
+                }}
+                onClick={handleBleConnect}
+                disabled={!bleSupported || bleConnecting}
+              >
+                {bleConnecting ? '⟳ Pairing...' : '⚡ Setup via Bluetooth'}
+              </button>
+            ) : (
+              <div style={{
+                background: THEME.bg0,
+                border: `1px solid ${THEME.purple}44`,
+                borderRadius: 8,
+                padding: 12,
+              }}>
+                {/* BLE Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ color: THEME.purple, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Bluetooth Setup</span>
+                  <button
+                    style={{ ...btnStyle, padding: '3px 8px', fontSize: 10 }}
+                    onClick={handleBleDisconnect}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {/* Status Badge */}
+                {bleStatus && (
+                  <div style={{
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    marginBottom: 10,
+                    background: bleStatus.type === 'CONNECTED' ? `${THEME.green}22` :
+                                bleStatus.type === 'CONNECTING' ? `${THEME.amber}22` :
+                                bleStatus.type === 'FAILED' ? `${THEME.danger}22` :
+                                `${THEME.purple}22`,
+                    color: bleStatus.type === 'CONNECTED' ? THEME.green :
+                           bleStatus.type === 'CONNECTING' ? THEME.amber :
+                           bleStatus.type === 'FAILED' ? THEME.danger :
+                           THEME.purple,
+                    border: `1px solid ${bleStatus.type === 'CONNECTED' ? THEME.green :
+                             bleStatus.type === 'CONNECTING' ? THEME.amber :
+                             bleStatus.type === 'FAILED' ? THEME.danger :
+                             THEME.purple}44`,
+                  }}>
+                    {bleStatus.type === 'CONNECTING' && `Connecting to ${bleStatus.ssid}...`}
+                    {bleStatus.type === 'CONNECTED' && `Connected! IP: ${bleStatus.ip}`}
+                    {bleStatus.type === 'FAILED' && `Failed: ${bleStatus.ssid}`}
+                    {bleStatus.type === 'ADDED' && `Added: ${bleStatus.ssid}`}
+                    {bleStatus.type === 'FORGOTTEN' && `Removed: ${bleStatus.ssid}`}
+                    {bleStatus.type === 'ERROR' && `Error: ${bleStatus.message}`}
+                    {bleStatus.type === 'BLE_READY' && 'ESP32 Ready'}
+                  </div>
+                )}
+
+                {/* Saved Networks List */}
+                <div style={{ color: THEME.textDim, fontSize: 10, marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                  Saved Networks ({bleNetworks.length}/5)
+                </div>
+
+                {bleNetworks.length === 0 ? (
+                  <div style={{ color: THEME.textDim, fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+                    No saved networks. Add one below.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                    {bleNetworks.map((net) => (
+                      <div key={net.ssid} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 8px',
+                        background: THEME.bg1,
+                        borderRadius: 6,
+                        border: `1px solid ${net.ssid === bleLastSsid ? THEME.green + '44' : THEME.border}`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 12 }}>📶</span>
+                          <span style={{ color: THEME.textPrimary, fontSize: 12, fontFamily: THEME.font }}>
+                            {net.ssid}
+                          </span>
+                          {net.ssid === bleLastSsid && (
+                            <span style={{ fontSize: 9, color: THEME.green, fontWeight: 700 }}>LAST</span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            style={{
+                              ...btnStyle,
+                              padding: '3px 8px',
+                              fontSize: 10,
+                              color: THEME.accent,
+                              borderColor: `${THEME.accent}44`,
+                            }}
+                            onClick={() => handleBleConnectNetwork(net.ssid)}
+                            disabled={bleStatus?.type === 'CONNECTING'}
+                          >
+                            Connect
+                          </button>
+                          <button
+                            style={{
+                              ...btnStyle,
+                              padding: '3px 6px',
+                              fontSize: 10,
+                              color: THEME.danger,
+                              borderColor: `${THEME.danger}44`,
+                            }}
+                            onClick={() => handleBleForgetNetwork(net.ssid)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add New Network */}
+                <div style={{ color: THEME.textDim, fontSize: 10, marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                  Add Network
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <input
+                    type="text"
+                    placeholder="Wi-Fi Name (SSID)"
+                    value={newSsid}
+                    onChange={(e) => setNewSsid(e.target.value)}
+                    style={{ ...inputStyle, fontSize: 11 }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleBleAddNetwork(); }}
+                    style={{ ...inputStyle, fontSize: 11 }}
+                  />
+                  <button
+                    style={{
+                      ...btnStyle,
+                      color: THEME.green,
+                      borderColor: `${THEME.green}44`,
+                      opacity: newSsid.trim() ? 1 : 0.4,
+                    }}
+                    onClick={handleBleAddNetwork}
+                    disabled={!newSsid.trim()}
+                  >
+                    + Add & Save
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!bleSupported && (
+              <div style={{ color: THEME.textDim, fontSize: 10, marginTop: 6, textAlign: 'center' }}>
+                Bluetooth not supported in this browser. Use Chrome.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. LIVE POSITION CARD */}
