@@ -9,7 +9,7 @@ import {
   TrackingMode,
   DataLogEntry,
 } from './types/telescope';
-import { calculateSunPosition, getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET } from './lib/solarTracker';
+import { calculateSunPosition, getPolarisAzimuth } from './lib/solarTracker';
 import { getBodyAltAz, getCustomRaDecAltAz, getBodyPath, getAllBodiesNow } from './lib/astronomyEngine';
 import { calculateSatellitePosition } from './lib/satelliteTracker';
 import {
@@ -401,12 +401,14 @@ export default function App() {
         let decDeg: number | undefined;
         const mode = getTrackingMode(selectedObject);
 
+        const homeAz = espStatusRef.current?.homeAz ?? 36.0;
+
         if (selectedObject.type === 'solar') {
           const sun = calculateSunPosition(now);
-          motorAz = sun.targetAz;
-          motorEl = sun.targetEl;
+          rawAz = sun.targetAz;
+          rawEl = sun.targetEl;
           const polarisAz = getPolarisAzimuth(now);
-          rawAz = normalizeAz(motorAz + polarisAz - AZIMUTH_CALIBRATION_OFFSET);
+          motorAz = normalizeAz(rawAz - polarisAz + homeAz);
           rawEl = motorEl;
         } else if (selectedObject.type === 'planet' || selectedObject.type === 'moon') {
           const bodyId = selectedObject.astronomyEngineBody || selectedObject.id;
@@ -416,7 +418,7 @@ export default function App() {
           raDeg = result.raDeg;
           decDeg = result.decDeg;
           const polarisAz = getPolarisAzimuth(now);
-          motorAz = normalizeAz(rawAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET);
+          motorAz = normalizeAz(rawAz - polarisAz + homeAz);
           motorEl = rawEl;
         } else if (selectedObject.type === 'satellite') {
           const tle = getActiveSatellite(selectedSatelliteName);
@@ -425,7 +427,7 @@ export default function App() {
             rawAz = result.targetAz;
             rawEl = result.targetEl;
             const polarisAz = getPolarisAzimuth(now);
-            motorAz = normalizeAz(rawAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET);
+            motorAz = normalizeAz(rawAz - polarisAz + homeAz);
             motorEl = rawEl;
           }
         } else if (selectedObject.type === 'custom') {
@@ -437,7 +439,7 @@ export default function App() {
           raDeg = ra;
           decDeg = dec;
           const polarisAz = getPolarisAzimuth(now);
-          motorAz = normalizeAz(rawAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET);
+          motorAz = normalizeAz(rawAz - polarisAz + homeAz);
           motorEl = rawEl;
         }
 

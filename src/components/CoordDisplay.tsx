@@ -3,7 +3,7 @@ import { TargetCoordinates, EspStatus, MotorSkyCoordinates } from '../types/tele
 import { THEME } from '../styles/theme';
 import { isTleStale } from '../lib/tleService';
 import { getMotorRaDec } from '../lib/astronomyEngine';
-import { getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET } from '../lib/solarTracker';
+import { getPolarisAzimuth } from '../lib/solarTracker';
 
 interface CoordDisplayProps {
   coords: TargetCoordinates | null;
@@ -138,7 +138,8 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
               {(() => {
                 const pAz = getPolarisAzimuth(new Date(coords.timestamp));
                 const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
-                const reqAz = ((relAz + AZIMUTH_CALIBRATION_OFFSET) % 360 + 360) % 360;
+                const homeAz = espStatus?.homeAz ?? 36.0;
+                const reqAz = ((relAz + homeAz) % 360 + 360) % 360;
                 const reqEl = coords.rawEl !== undefined ? coords.rawEl : coords.targetEl;
                 return (
                   <>
@@ -157,7 +158,8 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
               {(() => {
                 const pAz = getPolarisAzimuth(new Date(coords.timestamp));
                 const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
-                const curAz = ((relAz + AZIMUTH_CALIBRATION_OFFSET + trackOffsetAz) % 360 + 360) % 360;
+                const homeAz = espStatus?.homeAz ?? 36.0;
+                const curAz = ((relAz + homeAz + trackOffsetAz) % 360 + 360) % 360;
                 const curEl = (coords.rawEl !== undefined ? coords.rawEl : coords.targetEl) + trackOffsetEl;
                 return (
                   <>

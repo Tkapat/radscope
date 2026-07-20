@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import * as Astronomy from 'astronomy-engine';
-import { getPolarisAzimuth, AZIMUTH_CALIBRATION_OFFSET, OBSERVER_LAT, OBSERVER_LON } from './solarTracker';
+import { getPolarisAzimuth, OBSERVER_LAT, OBSERVER_LON } from './solarTracker';
 
 // ── Observer ───────────────────────────────────────────────────────────────
 
@@ -119,12 +119,13 @@ export function getAllBodiesNow(
 export function getMotorRaDec(
   motorAzDeg: number,
   motorElDeg: number,
+  homeAz: number = 36.0,
   date?: Date,
 ): { raDeg: number; decDeg: number } {
   const d = date ?? new Date();
   
-  // 1. Get true north Azimuth
-  const trueAz = ((motorAzDeg + getPolarisAzimuth(d) - AZIMUTH_CALIBRATION_OFFSET) % 360 + 360) % 360;
+  // 1. Get true north Azimuth: TrueSkyAz = MotorAz + PolarisSkyAz - HomeAz
+  const trueAz = ((motorAzDeg + getPolarisAzimuth(d) - homeAz) % 360 + 360) % 360;
   
   // 2. Convert to radians
   const az = trueAz * (Math.PI / 180);
