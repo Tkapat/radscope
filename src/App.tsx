@@ -303,6 +303,10 @@ export default function App() {
         motorEl = rawEl;
       }
 
+      // Capture Required Angle before manual offsets are applied
+      const reqAngleAz = motorAz;
+      const reqAngleEl = motorEl;
+
       motorAz += trackOffsetAz;
       motorEl += trackOffsetEl;
 
@@ -311,8 +315,8 @@ export default function App() {
       const payload: TargetCoordinates = {
         targetAz: finalAz,
         targetEl: finalEl,
-        reqAngleAz: motorAz,
-        reqAngleEl: motorEl,
+        reqAngleAz,
+        reqAngleEl,
         trackOffsetAz,
         trackOffsetEl,
         rawAz,
@@ -485,14 +489,18 @@ export default function App() {
         
         const reqAngleAz = data.coords.reqAngleAz ?? data.coords.targetAz;
         const reqAngleEl = data.coords.reqAngleEl ?? data.coords.targetEl;
+        
+        // Manual offset
         const offsetAz = data.coords.trackOffsetAz ?? 0;
         const offsetEl = data.coords.trackOffsetEl ?? 0;
         
-        const motorAzCalc = reqAngleAz + offsetAz;
-        const motorElCalc = reqAngleEl + offsetEl;
+        // Motor data is the final sent target (shortest path + manual adjust)
+        const motorAz = data.coords.targetAz;
+        const motorEl = data.coords.targetEl;
         
-        const deltaAz = motorAzCalc - actualAz;
-        const deltaEl = motorElCalc - actualEl;
+        // Delta must be calculated before shortest path wrap to prevent 360-degree math errors
+        const deltaAz = reqAngleAz - actualAz + offsetAz;
+        const deltaEl = reqAngleEl - actualEl + offsetEl;
         
         const pad = (n: number) => n.toString().padStart(2, '0');
         const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -504,11 +512,11 @@ export default function App() {
           targetName: data.coords.objectName,
           actualAz: actualAz.toFixed(4),
           reqAngleAz: reqAngleAz.toFixed(4),
-          motorAz: motorAzCalc.toFixed(4),
+          motorAz: motorAz.toFixed(4),
           deltaAz: deltaAz.toFixed(4),
           actualEl: actualEl.toFixed(4),
           reqAngleEl: reqAngleEl.toFixed(4),
-          motorEl: motorElCalc.toFixed(4),
+          motorEl: motorEl.toFixed(4),
           deltaEl: deltaEl.toFixed(4),
         };
         setLogs(prev => [...prev, entry]);
