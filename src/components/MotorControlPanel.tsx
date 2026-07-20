@@ -116,8 +116,12 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
   }, []);
 
   const handleBleConnect = useCallback(async () => {
-    setBleConnecting(true);
-    const success = await bleClient.connect();
+    // We pass a callback to setBleConnecting so it only fires AFTER the browser's
+    // popup dialog finishes. If we set state before the dialog, strict browsers
+    // like Chrome will block the popup for lacking a direct synchronous user gesture!
+    const success = await bleClient.connect(() => {
+      setBleConnecting(true);
+    });
     setBleConnecting(false);
     if (success) {
       setShowBleSetup(true);

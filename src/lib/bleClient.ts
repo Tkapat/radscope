@@ -47,7 +47,7 @@ class BleClient {
    * Open the browser's Bluetooth pairing dialog and connect to "Telescope_Rig".
    * Returns true if connection was successful.
    */
-  async connect(): Promise<boolean> {
+  async connect(onConnecting?: () => void): Promise<boolean> {
     if (!this.isSupported()) {
       console.error('Web Bluetooth API is not supported in this browser.');
       return false;
@@ -55,10 +55,14 @@ class BleClient {
 
     try {
       // Request the device — this opens the browser's BLE pairing dialog
+      // This MUST be called synchronously with the user gesture to avoid popup blocking
       this.device = await navigator.bluetooth.requestDevice({
         filters: [{ name: 'Telescope_Rig' }],
         optionalServices: [SERVICE_UUID],
       });
+
+      // Dialog completed successfully, now update the UI to show "Pairing..."
+      if (onConnecting) onConnecting();
 
       // Listen for disconnection
       this.device.addEventListener('gattserverdisconnected', () => {
@@ -94,13 +98,9 @@ class BleClient {
 
       this.notifyConnection(true);
 
-      // Read the initial network list safely
-      try {
-        const value = await this.wifiListChar.readValue();
-        this.handleNetworkListUpdate(value);
-      } catch (e) {
-        console.warn('BLE: Failed to read initial network list', e);
-      }
+      // Ask the ESP32 to send the network list via notification
+      // This is much more reliable than readValue() on some operating systems
+      await this.sendCommand('GET_LIST');
 
       return true;
     } catch (err) {
