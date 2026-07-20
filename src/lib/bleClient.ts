@@ -221,10 +221,3 @@ class BleClient {
 
 /** Singleton BLE client instance shared across the application. */
 export const bleClient = new BleClient();
-
-// Explicitly disconnect on page reload so the OS doesn't keep the connection alive
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    bleClient.disconnect();
-  });
-}
