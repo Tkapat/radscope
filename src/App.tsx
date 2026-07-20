@@ -494,9 +494,13 @@ export default function App() {
         const deltaAz = motorAzCalc - actualAz;
         const deltaEl = motorElCalc - actualEl;
         
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        
         const entry: DataLogEntry = {
-          date: d.toLocaleDateString(),
-          time: d.toLocaleTimeString(),
+          date: dateStr,
+          time: timeStr,
           targetName: data.coords.objectName,
           actualAz: actualAz.toFixed(4),
           reqAngleAz: reqAngleAz.toFixed(4),
