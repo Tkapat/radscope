@@ -219,10 +219,9 @@ export default function App() {
         for (let i = 0; i < 48; i++) {
           const t = new Date(now.getTime() + i * 10 * 60000);
           const pos = calculateSunPosition(t);
-          // calculateSunPosition returns motor-frame az, we need true-north for sky map
-          // So we reverse the transform: trueAz = motorAz + polarisAz - CALIBRATION_OFFSET
+          // calculateSunPosition returns true-north az
           const polarisAz = getPolarisAzimuth(t);
-          const trueAz = normalizeAz(pos.targetAz + polarisAz - AZIMUTH_CALIBRATION_OFFSET);
+          const trueAz = pos.targetAz;
           points.push({ az: trueAz, el: pos.targetEl, time: t.getTime() });
         }
         setTargetPath({ objectName: 'Sun', points });
@@ -258,15 +257,15 @@ export default function App() {
     const mode = getTrackingMode(selectedObject);
 
     try {
+      const homeAz = espStatusRef.current?.homeAz ?? 36.0;
+
       if (selectedObject.type === 'solar') {
-        // calculateSunPosition already returns motor-frame az
         const sun = calculateSunPosition(now);
-        motorAz = sun.targetAz;
-        motorEl = sun.targetEl;
-        // Reverse to get true-north for display
+        rawAz = sun.targetAz;
+        rawEl = sun.targetEl;
         const polarisAz = getPolarisAzimuth(now);
-        rawAz = normalizeAz(motorAz + polarisAz - AZIMUTH_CALIBRATION_OFFSET);
-        rawEl = motorEl;
+        motorAz = normalizeAz(rawAz - polarisAz + homeAz);
+        motorEl = rawEl;
       } else if (selectedObject.type === 'planet' || selectedObject.type === 'moon') {
         const bodyId = selectedObject.astronomyEngineBody || selectedObject.id;
         const result = getBodyAltAz(bodyId, now);
@@ -276,7 +275,7 @@ export default function App() {
         decDeg = result.decDeg;
         // Transform to motor frame
         const polarisAz = getPolarisAzimuth(now);
-        motorAz = normalizeAz(rawAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET);
+        motorAz = normalizeAz(rawAz - polarisAz + homeAz);
         motorEl = rawEl;
       } else if (selectedObject.type === 'satellite') {
         const tle = getActiveSatellite(selectedSatelliteName);
@@ -286,7 +285,7 @@ export default function App() {
           rawEl = result.targetEl;
           // Transform to motor frame
           const polarisAz = getPolarisAzimuth(now);
-          motorAz = normalizeAz(rawAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET);
+          motorAz = normalizeAz(rawAz - polarisAz + homeAz);
           motorEl = rawEl;
         }
       } else if (selectedObject.type === 'custom') {
@@ -299,7 +298,7 @@ export default function App() {
         decDeg = dec;
         // Transform to motor frame
         const polarisAz = getPolarisAzimuth(now);
-        motorAz = normalizeAz(rawAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET);
+        motorAz = normalizeAz(rawAz - polarisAz + homeAz);
         motorEl = rawEl;
       }
 

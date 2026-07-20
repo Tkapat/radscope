@@ -6,7 +6,6 @@ export const OBSERVER_LAT = 22.5601079;
 export const OBSERVER_LON = 88.4873657;
 export const POLARIS_RA = 37.95;          // degrees
 export const POLARIS_DEC = 89.2641;       // degrees
-export const AZIMUTH_CALIBRATION_OFFSET = -12;
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -158,10 +157,6 @@ export function calculateSunPosition(date?: Date): { targetAz: number; targetEl:
 
   const altitude = radToDeg(alt);
 
-  // Motor‑relative azimuth via Polaris reference
-  const polarisAz = getPolarisAzimuth(d);
-  let motorAz = sunAz - polarisAz + AZIMUTH_CALIBRATION_OFFSET;
-  motorAz = ((motorAz % 360) + 360) % 360;
-
-  return { targetAz: motorAz, targetEl: altitude };
+  // Return True Sky Coordinates (App.tsx will convert to Motor coordinates)
+  return { targetAz: sunAz, targetEl: altitude };
 }
