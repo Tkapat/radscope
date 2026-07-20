@@ -94,9 +94,13 @@ class BleClient {
 
       this.notifyConnection(true);
 
-      // Read the initial network list
-      const value = await this.wifiListChar.readValue();
-      this.handleNetworkListUpdate(value);
+      // Read the initial network list safely
+      try {
+        const value = await this.wifiListChar.readValue();
+        this.handleNetworkListUpdate(value);
+      } catch (e) {
+        console.warn('BLE: Failed to read initial network list', e);
+      }
 
       return true;
     } catch (err) {
