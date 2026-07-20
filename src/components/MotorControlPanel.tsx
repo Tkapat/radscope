@@ -69,7 +69,13 @@ const MotorControlPanel: React.FC<MotorControlPanelProps> = ({
 
   // ─── BLE Listeners ───
   useEffect(() => {
-    bleClient.onConnection((connected: boolean) => setBleConnected(connected));
+    bleClient.onConnection((connected: boolean) => {
+      setBleConnected(connected);
+      if (!connected) {
+        setShowBleSetup(false);
+        setBleStatus(null);
+      }
+    });
     bleClient.onNetworkList((networks: SavedWifiNetwork[], last: string) => {
       setBleNetworks(networks);
       setBleLastSsid(last);
