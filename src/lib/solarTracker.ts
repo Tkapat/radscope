@@ -6,7 +6,7 @@ export const OBSERVER_LAT = 22.5601079;
 export const OBSERVER_LON = 88.4873657;
 export const POLARIS_RA = 37.95;          // degrees
 export const POLARIS_DEC = 89.2641;       // degrees
-export const AZIMUTH_CALIBRATION_OFFSET = 36.0;
+export const AZIMUTH_CALIBRATION_OFFSET = 0;
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
