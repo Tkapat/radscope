@@ -256,8 +256,7 @@ export default function App() {
     let decDeg: number | undefined;
     const mode = getTrackingMode(selectedObject);
 
-    try {
-      const homeAz = espStatusRef.current?.homeAz ?? 36.0;
+      const homeAz = espStatusRef.current?.homeAz ?? 0.0;
 
       if (selectedObject.type === 'solar') {
         const sun = calculateSunPosition(now);
@@ -304,7 +303,7 @@ export default function App() {
 
       // Capture Required Angle before manual offsets are applied
       const reqAngleAz = motorAz;
-      const reqAngleEl = motorEl;
+      const reqAngleEl = rawEl ?? motorEl;
 
       motorAz += trackOffsetAz;
       motorEl += trackOffsetEl;
@@ -401,7 +400,7 @@ export default function App() {
         let decDeg: number | undefined;
         const mode = getTrackingMode(selectedObject);
 
-        const homeAz = espStatusRef.current?.homeAz ?? 36.0;
+        const homeAz = espStatusRef.current?.homeAz ?? 0.0;
 
         if (selectedObject.type === 'solar') {
           const sun = calculateSunPosition(now);
@@ -409,7 +408,7 @@ export default function App() {
           rawEl = sun.targetEl;
           const polarisAz = getPolarisAzimuth(now);
           motorAz = normalizeAz(rawAz - polarisAz + homeAz);
-          rawEl = motorEl;
+          motorEl = rawEl;
         } else if (selectedObject.type === 'planet' || selectedObject.type === 'moon') {
           const bodyId = selectedObject.astronomyEngineBody || selectedObject.id;
           const result = getBodyAltAz(bodyId, now);
@@ -443,11 +442,16 @@ export default function App() {
           motorEl = rawEl;
         }
 
+        const reqAngleAz = motorAz;
+        const reqAngleEl = rawEl ?? motorEl;
+
         const { finalAz, finalEl } = normalizeTarget(motorAz, motorEl, espStatusRef.current);
 
         setCoords({
           targetAz: finalAz,
           targetEl: finalEl,
+          reqAngleAz,
+          reqAngleEl,
           rawAz,
           rawEl,
           raDeg,

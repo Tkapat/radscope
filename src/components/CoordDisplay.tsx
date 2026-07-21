@@ -104,7 +104,7 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
             <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>1. Actual (True North)</div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 2 }}>
               <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.rawAz?.toFixed(2) ?? '—'}°</span></span>
-              <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
+              <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{(coords.rawEl ?? coords.targetEl).toFixed(2)}°</span></span>
             </div>
             <div style={{ color: THEME.textMuted, fontSize: 10 }}>
               RA {coords.raDeg?.toFixed(2) ?? '—'}° | Dec {coords.decDeg?.toFixed(2) ?? '—'}°
@@ -121,7 +121,7 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
                 return (
                   <>
                     <span style={{ color: THEME.textDim, fontSize: 11 }}>Az <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.rawAz !== undefined ? relAz.toFixed(2) : '—'}°</span></span>
-                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{coords.targetEl.toFixed(2)}°</span></span>
+                    <span style={{ color: THEME.textDim, fontSize: 11 }}>El <span style={{ color: THEME.accent, fontWeight: 'bold' }}>{(coords.rawEl ?? coords.targetEl).toFixed(2)}°</span></span>
                   </>
                 );
               })()}
@@ -138,7 +138,7 @@ const CoordDisplay: React.FC<CoordDisplayProps> = ({ coords, espStatus, motorSky
               {(() => {
                 const pAz = getPolarisAzimuth(new Date(coords.timestamp));
                 const relAz = coords.rawAz !== undefined ? ((coords.rawAz - pAz) % 360 + 360) % 360 : 0;
-                const homeAz = espStatus?.homeAz ?? 36.0;
+                const homeAz = espStatus?.homeAz ?? 0.0;
                 const reqAz = ((relAz + homeAz) % 360 + 360) % 360;
                 const reqEl = coords.rawEl !== undefined ? coords.rawEl : coords.targetEl;
                 return (
