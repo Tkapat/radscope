@@ -256,6 +256,7 @@ export default function App() {
     let decDeg: number | undefined;
     const mode = getTrackingMode(selectedObject);
 
+    try {
       const homeAz = espStatusRef.current?.homeAz ?? 0.0;
 
       if (selectedObject.type === 'solar') {
