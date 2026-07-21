@@ -6,6 +6,7 @@ import { THEME } from '../styles/theme';
 interface SkyMap3DProps {
   bodies: SkyMapBody[];
   targetPath?: SkyPath;
+  trackedTrail?: Array<{ az: number; el: number; time: number }>;
   width?: number | string;
   height?: number | string;
   isFullscreen?: boolean;
@@ -64,6 +65,7 @@ function makeTextSprite(text: string, color: string, fontSize: number = 48): THR
 const SkyMap3D: React.FC<SkyMap3DProps> = ({
   bodies,
   targetPath,
+  trackedTrail,
   width = 520,
   height = 500,
   isFullscreen,
@@ -79,6 +81,7 @@ const SkyMap3D: React.FC<SkyMap3DProps> = ({
   const lastMouseRef = useRef({ x: 0, y: 0 });
   const bodyMeshGroupRef = useRef<THREE.Group>(new THREE.Group());
   const pathGroupRef = useRef<THREE.Group>(new THREE.Group());
+  const trailGroupRef = useRef<THREE.Group>(new THREE.Group());
   const bodyMeshesRef = useRef<THREE.Mesh[]>([]);
   const bodyDataRef = useRef<SkyMapBody[]>([]);
   const targetMeshesRef = useRef<THREE.Mesh[]>([]);
@@ -245,6 +248,7 @@ const SkyMap3D: React.FC<SkyMap3DProps> = ({
     // Add body and path groups
     scene.add(bodyMeshGroupRef.current);
     scene.add(pathGroupRef.current);
+    scene.add(trailGroupRef.current);
 
     // Ambient light
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
@@ -602,6 +606,47 @@ const SkyMap3D: React.FC<SkyMap3DProps> = ({
       group.add(transitLabel);
     }
   }, [targetPath]);
+
+  // Trail update
+  useEffect(() => {
+    const group = trailGroupRef.current;
+    
+    while (group.children.length > 0) {
+      const child = group.children[0];
+      group.remove(child);
+      if (child instanceof THREE.Line || child instanceof THREE.LineSegments) {
+        child.geometry?.dispose();
+        if (Array.isArray(child.material)) {
+          child.material.forEach((m: THREE.Material) => m.dispose());
+        } else if (child.material) {
+          (child.material as THREE.Material).dispose();
+        }
+      }
+    }
+
+    if (!trackedTrail || trackedTrail.length < 2) return;
+
+    // We can draw a simple line for the trail
+    const points: THREE.Vector3[] = [];
+    trackedTrail.forEach(pt => {
+      // Only draw above horizon or slightly below
+      if (pt.el >= -5) {
+        points.push(azElToVec3(pt.az, pt.el, DOME_R * 0.92));
+      }
+    });
+
+    if (points.length > 1) {
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: THEME.danger, // Or maybe a distinct color like red/pink
+        transparent: true,
+        opacity: 0.8,
+        linewidth: 2,
+      });
+      const line = new THREE.Line(lineGeo, lineMat);
+      group.add(line);
+    }
+  }, [trackedTrail]);
 
   const setView = useCallback((mode: 'dome' | 'top' | 'reset') => {
     if (mode === 'top') {

@@ -20,23 +20,12 @@ Radscope is an advanced radio telescope control application that features a fron
 ### Firmware & Networking (ESP32)
 * **Language:** C++ (Using the Arduino IDE framework).
 * **Motor Control:** `AccelStepper` library (Calculates real-time acceleration curves, maximum speeds, and absolute positional steps).
+* **Network Setup:** Web Bluetooth (ESP32 boots into BLE setup mode, allowing the web app to send Wi-Fi credentials).
 * **Communication Protocol:** WebSockets (`WebSocketsServer`) over Port 81 (For instant, low-latency, two-way communication between the desktop app and the telescope).
 * **Network Discovery:** mDNS (`ESPmDNS`) (Allows the app to automatically find the telescope using `radioscope.local` instead of a shifting IP address).
 * **Data Parsing:** `ArduinoJson` (Encodes and decodes the complex command structures sent back and forth).
 
-## 🚀 Development Setup
 
-To run the desktop application locally in development mode:
 
-```bash
-# Install dependencies
-pnpm install
 
-# Run the Tauri development server
-pnpm tauri dev
-```
-
-To build a standalone production application:
-```bash
-pnpm tauri build
 ```

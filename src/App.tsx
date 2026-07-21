@@ -134,6 +134,7 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [trackOffsetAz, setTrackOffsetAz] = useState(0);
   const [trackOffsetEl, setTrackOffsetEl] = useState(0);
+  const [trackedTrail, setTrackedTrail] = useState<Array<{ az: number; el: number; time: number }>>([]);
 
   // ─── Data Logger State ───
   const [logs, setLogs] = useState<DataLogEntry[]>([]);
@@ -329,6 +330,19 @@ export default function App() {
 
       setCoords(payload);
       espClient.sendTrack(finalAz, finalEl, selectedObject.name);
+
+      setTrackedTrail(prev => {
+        const az = rawAz ?? finalAz;
+        const el = rawEl ?? finalEl;
+        // avoid too many duplicate close points if it's not moving fast
+        if (prev.length > 0) {
+          const last = prev[prev.length - 1];
+          if (Math.abs(last.az - az) < 0.05 && Math.abs(last.el - el) < 0.05) return prev;
+        }
+        const newTrail = [...prev, { az, el, time: Date.now() }];
+        if (newTrail.length > 2000) return newTrail.slice(newTrail.length - 2000);
+        return newTrail;
+      });
     } catch (e) {
       console.warn('Tracking computation error:', e);
     }
@@ -357,6 +371,8 @@ export default function App() {
   }, [espStatus]);
 
   const stopTracking = useCallback(() => {
+    setIsTracking(false);
+    setTrackedTrail([]);
     if (trackingIntervalRef.current) {
       clearInterval(trackingIntervalRef.current);
       trackingIntervalRef.current = null;
@@ -364,7 +380,6 @@ export default function App() {
     if (isTracking) {
       espClient.sendStop();
     }
-    setIsTracking(false);
   }, [isTracking]);
 
   // Cleanup intervals on unmount
@@ -694,6 +709,7 @@ export default function App() {
           <SkyMap3D
             bodies={skyBodies}
             targetPath={targetPath}
+            trackedTrail={trackedTrail}
             width="100%"
             height="100%"
             isFullscreen={isFullscreen}
